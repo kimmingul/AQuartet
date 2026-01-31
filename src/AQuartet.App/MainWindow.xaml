@@ -1,0 +1,178 @@
+<ui:FluentWindow x:Class="AQuartet.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:vm="clr-namespace:AQuartet.App.ViewModels"
+        xmlns:views="clr-namespace:AQuartet.App.Views"
+        xmlns:core="clr-namespace:AQuartet.Core;assembly=AQuartet.Core"
+        xmlns:converters="clr-namespace:AQuartet.App.Converters"
+        mc:Ignorable="d"
+        Title="A-Quartet"
+        Width="1200"
+        Height="800"
+        WindowStartupLocation="CenterScreen"
+        Topmost="{Binding IsAlwaysOnTop}"
+        ExtendsContentIntoTitleBar="True"
+        Icon="pack://application:,,,/app.ico">
+    <ui:FluentWindow.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <converters:ServiceSelectionToBrushConverter x:Key="ServiceSelectionToBrush"
+                                                     DefaultBrush="{DynamicResource TextFillColorSecondaryBrush}"
+                                                     SelectedBrush="{DynamicResource AccentFillColorDefaultBrush}" />
+    </ui:FluentWindow.Resources>
+    <ui:FluentWindow.InputBindings>
+        <KeyBinding Key="Tab" Modifiers="Control" Command="{Binding NextTabCommand}" />
+        <KeyBinding Key="Tab" Modifiers="Control+Shift" Command="{Binding PrevTabCommand}" />
+        <KeyBinding Key="R" Modifiers="Control" Command="{Binding ReloadCommand}" />
+    </ui:FluentWindow.InputBindings>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- TitleBar -->
+        <ui:TitleBar Grid.Row="0" Title="A-Quartet" ShowMaximize="True" ShowMinimize="True" />
+
+        <!-- Main content: Sidebar + Right panel -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="48" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Sidebar: service icons top + settings bottom -->
+            <Border Grid.Column="0"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="0,0,1,0">
+                <DockPanel LastChildFill="True">
+                    <!-- Bottom: refresh + theme + AOT -->
+                    <StackPanel DockPanel.Dock="Bottom" Margin="0,0,0,4">
+                        <ui:Button Width="40" Height="40"
+                                   Margin="4,0,4,4"
+                                   Padding="4"
+                                   ToolTip="Reload (Ctrl+R)"
+                                   Command="{Binding ReloadCommand}">
+                            <TextBlock Text="↻" FontSize="18" HorizontalAlignment="Center" />
+                        </ui:Button>
+                        <ui:Button Width="40" Height="40"
+                                   Margin="4,0,4,4"
+                                   Padding="4"
+                                   ToolTip="{Binding ThemeLabel}"
+                                   Command="{Binding CycleThemeCommand}">
+                            <TextBlock Text="{Binding ThemeIcon}" FontSize="18" HorizontalAlignment="Center" />
+                        </ui:Button>
+                        <ToggleButton Width="40" Height="40"
+                                      Margin="4,0,4,0"
+                                      Padding="4"
+                                      ToolTip="Always On Top"
+                                      IsChecked="{Binding IsAlwaysOnTop}">
+                            <TextBlock Text="📌" FontSize="18" HorizontalAlignment="Center" />
+                        </ToggleButton>
+                    </StackPanel>
+
+                    <!-- Top: service logos -->
+                    <ItemsControl ItemsSource="{Binding Services}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type core:AiService}">
+                                <ui:Button Width="40" Height="40"
+                                           Margin="4,4,4,0"
+                                           Padding="4"
+                                           ToolTip="{Binding Name}"
+                                           Command="{Binding DataContext.SelectServiceCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                           CommandParameter="{Binding}">
+                                    <Border Width="24" Height="24">
+                                        <Border.Background>
+                                            <MultiBinding Converter="{StaticResource ServiceSelectionToBrush}">
+                                                <Binding />
+                                                <Binding Path="DataContext.SelectedTab"
+                                                         RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            </MultiBinding>
+                                        </Border.Background>
+                                        <Border.OpacityMask>
+                                            <ImageBrush ImageSource="{Binding LogoResource}"
+                                                        Stretch="Uniform"
+                                                        RenderOptions.BitmapScalingMode="HighQuality" />
+                                        </Border.OpacityMask>
+                                    </Border>
+                                </ui:Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </DockPanel>
+            </Border>
+
+            <!-- Right panel: tab headers + content -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Tab header strip -->
+                <ListBox x:Name="TabHeaderList"
+                         Grid.Row="0"
+                         ItemsSource="{Binding Tabs}"
+                         SelectedItem="{Binding SelectedTab}"
+                         SelectionMode="Single"
+                         AllowDrop="True"
+                         PreviewMouseLeftButtonDown="TabHeader_PreviewMouseLeftButtonDown"
+                         PreviewMouseMove="TabHeader_PreviewMouseMove"
+                         Drop="TabHeader_Drop"
+                         Background="Transparent"
+                         BorderThickness="0,0,0,1"
+                         BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Height" Value="28" />
+                            <Setter Property="Padding" Value="4,0" />
+                            <Setter Property="VerticalContentAlignment" Value="Center" />
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:TabViewModel}">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0">
+                                <TextBlock Text="{Binding Title}" Margin="0,0,6,0" VerticalAlignment="Center" FontSize="12" />
+                                <ui:Button Appearance="Secondary"
+                                           Content="✕"
+                                           Width="18" Height="18"
+                                           Padding="0"
+                                           FontSize="10"
+                                           Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                           CommandParameter="{Binding}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- Stacked content: all TabViews alive, only selected visible -->
+                <ItemsControl Grid.Row="1" ItemsSource="{Binding Tabs}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Grid />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:TabViewModel}">
+                            <views:TabView Visibility="{Binding IsSelected, Converter={StaticResource BoolToVis}}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        </Grid>
+
+        <!-- StatusBar: current URL -->
+        <StatusBar Grid.Row="2">
+            <StatusBarItem Content="{Binding CurrentUrl}" />
+        </StatusBar>
+    </Grid>
+</ui:FluentWindow>

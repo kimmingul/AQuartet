@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AQuartet.App/AQuartet.App.csproj" />
+    <Project Path="src/AQuartet.Core/AQuartet.Core.csproj" />
+  </Folder>
+</Solution>
