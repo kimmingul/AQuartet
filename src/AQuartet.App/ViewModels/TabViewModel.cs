@@ -1,5 +1,8 @@
 using System;
 using System.Diagnostics;
+using System.IO;
+using System.Net.Http;
+using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using AQuartet.Core;
 using Microsoft.Web.WebView2.Core;
@@ -39,6 +42,11 @@ public partial class TabViewModel : ObservableObject
     [ObservableProperty]
     private bool isSelected;
 
+    [ObservableProperty]
+    private BitmapImage? favicon;
+
+    private static readonly HttpClient s_httpClient = new();
+
     public void AttachWebView(WebView2 webView)
     {
         if (_isWebViewAttached)
@@ -57,8 +65,10 @@ public partial class TabViewModel : ObservableObject
         _webView.CoreWebView2.DocumentTitleChanged += OnDocumentTitleChanged;
         _webView.CoreWebView2.HistoryChanged += OnHistoryChanged;
         _webView.CoreWebView2.NewWindowRequested += OnNewWindowRequested;
+        _webView.CoreWebView2.FaviconChanged += OnFaviconChanged;
 
         UpdateHistoryState();
+        UpdateFaviconAsync();
     }
 
     public void Detach()
@@ -73,9 +83,49 @@ public partial class TabViewModel : ObservableObject
         _webView.CoreWebView2.DocumentTitleChanged -= OnDocumentTitleChanged;
         _webView.CoreWebView2.HistoryChanged -= OnHistoryChanged;
         _webView.CoreWebView2.NewWindowRequested -= OnNewWindowRequested;
+        _webView.CoreWebView2.FaviconChanged -= OnFaviconChanged;
 
         _webView = null;
         _isWebViewAttached = false;
+    }
+
+    private void OnFaviconChanged(object? sender, object e)
+    {
+        UpdateFaviconAsync();
+    }
+
+    private async void UpdateFaviconAsync()
+    {
+        if (_webView?.CoreWebView2 is null)
+        {
+            return;
+        }
+
+        var faviconUri = _webView.CoreWebView2.FaviconUri;
+        if (string.IsNullOrEmpty(faviconUri))
+        {
+            Favicon = null;
+            return;
+        }
+
+        try
+        {
+            var bytes = await s_httpClient.GetByteArrayAsync(faviconUri);
+            var bitmap = new BitmapImage();
+            using (var stream = new MemoryStream(bytes))
+            {
+                bitmap.BeginInit();
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.StreamSource = stream;
+                bitmap.EndInit();
+            }
+            bitmap.Freeze();
+            Favicon = bitmap;
+        }
+        catch
+        {
+            Favicon = null;
+        }
     }
 
     public void Navigate(string url)

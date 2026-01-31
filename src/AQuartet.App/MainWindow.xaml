@@ -18,9 +18,7 @@
         Icon="pack://application:,,,/app.ico">
     <ui:FluentWindow.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
-        <converters:ServiceSelectionToBrushConverter x:Key="ServiceSelectionToBrush"
-                                                     DefaultBrush="{DynamicResource TextFillColorSecondaryBrush}"
-                                                     SelectedBrush="{DynamicResource AccentFillColorDefaultBrush}" />
+        <converters:ServiceThemeToLogoConverter x:Key="ServiceThemeToLogo" />
     </ui:FluentWindow.Resources>
     <ui:FluentWindow.InputBindings>
         <KeyBinding Key="Tab" Modifiers="Control" Command="{Binding NextTabCommand}" />
@@ -85,20 +83,15 @@
                                            ToolTip="{Binding Name}"
                                            Command="{Binding DataContext.SelectServiceCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                            CommandParameter="{Binding}">
-                                    <Border Width="24" Height="24">
-                                        <Border.Background>
-                                            <MultiBinding Converter="{StaticResource ServiceSelectionToBrush}">
+                                    <Image Width="24" Height="24" RenderOptions.BitmapScalingMode="HighQuality">
+                                        <Image.Source>
+                                            <MultiBinding Converter="{StaticResource ServiceThemeToLogo}">
                                                 <Binding />
-                                                <Binding Path="DataContext.SelectedTab"
+                                                <Binding Path="DataContext.ThemeMode"
                                                          RelativeSource="{RelativeSource AncestorType=Window}" />
                                             </MultiBinding>
-                                        </Border.Background>
-                                        <Border.OpacityMask>
-                                            <ImageBrush ImageSource="{Binding LogoResource}"
-                                                        Stretch="Uniform"
-                                                        RenderOptions.BitmapScalingMode="HighQuality" />
-                                        </Border.OpacityMask>
-                                    </Border>
+                                        </Image.Source>
+                                    </Image>
                                 </ui:Button>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -128,9 +121,12 @@
                          BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
-                            <Setter Property="Height" Value="28" />
-                            <Setter Property="Padding" Value="4,0" />
+                            <Setter Property="Width" Value="150" />
+                            <Setter Property="MaxWidth" Value="150" />
+                            <Setter Property="Height" Value="32" />
+                            <Setter Property="Padding" Value="8,0" />
                             <Setter Property="VerticalContentAlignment" Value="Center" />
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                         </Style>
                     </ListBox.ItemContainerStyle>
                     <ListBox.ItemsPanel>
@@ -140,16 +136,33 @@
                     </ListBox.ItemsPanel>
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:TabViewModel}">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0">
-                                <TextBlock Text="{Binding Title}" Margin="0,0,6,0" VerticalAlignment="Center" FontSize="12" />
-                                <ui:Button Appearance="Secondary"
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Image Grid.Column="0"
+                                       Source="{Binding Favicon}"
+                                       Width="16" Height="16"
+                                       Margin="0,0,8,0"
+                                       VerticalAlignment="Center"
+                                       RenderOptions.BitmapScalingMode="HighQuality" />
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Title}"
+                                           VerticalAlignment="Center"
+                                           FontSize="12"
+                                           TextTrimming="CharacterEllipsis" />
+                                <ui:Button Grid.Column="2"
+                                           Appearance="Secondary"
                                            Content="✕"
                                            Width="18" Height="18"
+                                           Margin="4,0,0,0"
                                            Padding="0"
                                            FontSize="10"
                                            Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                            CommandParameter="{Binding}" />
-                            </StackPanel>
+                            </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>

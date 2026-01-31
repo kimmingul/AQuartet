@@ -24,12 +24,7 @@
 
   <ItemGroup>
     <Resource Include="app.ico" />
-    <Resource Include="Assets\Logos\grok.png" />
-    <Resource Include="Assets\Logos\claude.png" />
-    <Resource Include="Assets\Logos\chatgpt.png" />
-    <Resource Include="Assets\Logos\gemini.png" />
-    <Resource Include="Assets\Logos\perplexity.png" />
-    <Resource Include="Assets\Logos\copilot.png" />
+    <Resource Include="Assets\Logos\*.png" />
   </ItemGroup>
 
 </Project>
