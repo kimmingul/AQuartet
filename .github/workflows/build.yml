@@ -1,0 +1,109 @@
+# ============================================================================
+# A-Quartet GitHub Actions CI/CD Pipeline
+# ============================================================================
+# 이 워크플로우는 push 또는 PR 시 자동으로 빌드하고,
+# 태그(v*) push 시 GitHub Release에 빌드 결과물을 업로드합니다.
+# ============================================================================
+
+name: 🛡️ A-Quartet Build & Release
+
+on:
+  push:
+    branches: [ master, main, develop ]
+    tags: [ 'v*' ]           # v1.0.0 같은 태그 push 시 Release 생성
+  pull_request:
+    branches: [ master, main ]
+
+  workflow_dispatch:          # 수동 실행 가능
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  PROJECT_PATH: src/AQuartet.App
+  SOLUTION_PATH: AQuartet.slnx
+
+jobs:
+  # ──────────────────────────────────────────────────────────
+  # Job 1: Build & Test
+  # ──────────────────────────────────────────────────────────
+  build:
+    name: 🔨 Build (${{ matrix.configuration }})
+    runs-on: windows-latest   # WPF는 Windows에서만 빌드 가능
+
+    strategy:
+      matrix:
+        configuration: [ Release ]
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: 📦 Restore NuGet Packages
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+      - name: 🔨 Build
+        run: >
+          dotnet build ${{ env.SOLUTION_PATH }}
+          --configuration ${{ matrix.configuration }}
+          --no-restore
+
+      # ── Single-file Publish ──
+      - name: 📤 Publish (Single-file)
+        if: github.event_name == 'push'
+        run: >
+          dotnet publish ${{ env.PROJECT_PATH }}
+          --configuration ${{ matrix.configuration }}
+          --runtime win-x64
+          --self-contained false
+          --output ./publish/framework-dependent
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+
+      # ── Self-contained Publish (Runtime 포함, 설치 없이 실행 가능) ──
+      - name: 📤 Publish (Self-contained)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: >
+          dotnet publish ${{ env.PROJECT_PATH }}
+          --configuration ${{ matrix.configuration }}
+          --runtime win-x64
+          --self-contained true
+          --output ./publish/self-contained
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+
+      # ── 빌드 결과물 아카이브 ──
+      - name: 🗜️ Zip Artifacts (Framework-dependent)
+        if: github.event_name == 'push'
+        run: Compress-Archive -Path ./publish/framework-dependent/* -DestinationPath ./AQuartet-win-x64.zip
+
+      - name: 🗜️ Zip Artifacts (Self-contained)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: Compress-Archive -Path ./publish/self-contained/* -DestinationPath ./AQuartet-win-x64-standalone.zip
+
+      # ── Artifact 업로드 (PR이나 일반 push에서 다운로드 가능) ──
+      - name: ⬆️ Upload Build Artifact
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: AQuartet-win-x64
+          path: ./AQuartet-win-x64.zip
+          retention-days: 30
+
+      # ── GitHub Release 생성 (태그 push 시에만) ──
+      - name: 🚀 Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
+          files: |
+            ./AQuartet-win-x64.zip
+            ./AQuartet-win-x64-standalone.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
