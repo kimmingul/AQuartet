@@ -76,22 +76,23 @@ jobs:
           -p:IncludeNativeLibrariesForSelfExtract=true
           -p:EnableCompressionInSingleFile=true
 
-      # ── 빌드 결과물 아카이브 ──
-      - name: 🗜️ Zip Artifacts (Framework-dependent)
-        if: github.event_name == 'push'
-        run: Compress-Archive -Path ./publish/framework-dependent/* -DestinationPath ./AQuartet-win-x64.zip
-
+      # ── 빌드 결과물 아카이브 (Release용만 zip) ──
       - name: 🗜️ Zip Artifacts (Self-contained)
         if: startsWith(github.ref, 'refs/tags/v')
         run: Compress-Archive -Path ./publish/self-contained/* -DestinationPath ./AQuartet-win-x64-standalone.zip
 
+      - name: 🗜️ Zip Artifacts (Framework-dependent, Release용)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: Compress-Archive -Path ./publish/framework-dependent/* -DestinationPath ./AQuartet-win-x64.zip
+
       # ── Artifact 업로드 (PR이나 일반 push에서 다운로드 가능) ──
+      # upload-artifact가 자체적으로 zip을 만들므로 폴더를 직접 전달
       - name: ⬆️ Upload Build Artifact
         if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: AQuartet-win-x64
-          path: ./AQuartet-win-x64.zip
+          path: ./publish/framework-dependent/
           retention-days: 30
 
       # ── GitHub Release 생성 (태그 push 시에만) ──
